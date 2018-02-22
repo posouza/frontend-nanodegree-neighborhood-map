@@ -84,20 +84,22 @@ function initMap(){
   populateInfoWindow = function(marker){
 
     // Send an ajax call to Wikipedia to retrieve information on the points of interest.
-    var wikiEndPoint = 'https://en.wikipedia.org/w/api.php?' +
-        'format=json&' +
-        'action=parse&' +
-        'prop=text&' +
-        'section=0&' +
-        'page=' + marker.title;
+    // var wikiEndPoint = 'https://en.wikipedia.org/w/api.php?' +
+    var wikiUrl = 'https://en.wikipedia.org/w/api.php?' +
+    'format=json&' +
+    'action=parse&' +
+    'section=0&' +
+    'page=' + marker.title;
+  // AJAX request object.
     $.ajax({
-      url: wikiEndPoint,
-      dataType: "jsonp",
-      contentType: 'text/plain',
+    url: wikiUrl,
+    dataType: 'jsonp',
+    contentType: 'text/plain',
+
       //Retrieves the markup data from WikiPedia and set it to the infowindow content.
       success: function(data){
 
-        var markup = data.parse.text['*'];
+        var markup = data['*'];
 
         var blurb = $('<div></div>').html(markup);
 
