@@ -1,161 +1,103 @@
-@import url(http://weloveiconfonts.com/api/?family=fontawesome);
-
-[class*="fontawesome-"]:before {
-  font-family: "FontAwesome", sans-serif;
-}
-
 * {
   box-sizing: border-box;
 }
 
-html, body{
+html,
+body,
+#map {
+  font-family: arial, sans-serif;
   height: 100%;
   width: 100%;
-  padding: 0;
   margin: 0;
-  overflow: none;
-}
-
-.container{
-  display:flex;
-  justify-content: center;
-  align-items: center;
-  position: relative;
-  height: 100%;
-  width: 100%;
-}
-
-.mobile-menu {
-  display: none;
-  justify-content: flex-start;
-  align-items: center;
-  padding: 10px 10px 0 10px;
-  width: 100%;
-  height: 50px;
-}
-
-.mobile-title-container{
-  display: flex;
-  justify-content: center;
-  width: 100%;
-}
-
-.mobile-title-container > h3 {
-  font-size: 25px;
-  margin: 0;
-}
-
-
-
-#mobile-btn{
-  border: none;
-  background-color: white;
-  font-size: 20px;
-  height: 35px;
-}
-
-.map, .controls {
-  position: relative;
-  height: calc(100% - 20px);
-  margin: 10px;
-}
-
-.controls{
-  display: flex;
-  flex-direction: column;
-  width: 480px;
-  margin-right: 0;
-  padding: 0 10px;
-  -webkit-transition: transform 1s;
-  transition: transform 1s;
-}
-
-.expanded{
-  left: 0;
-}
-
-.map{
-  width: 100%;
-}
-
-.filter{
-  display: flex;
-  margin-top: 15px;
-  min-height: 50px;
-}
-
-.error-message{
-  font-size: 20px;
-  font-weight: 100;
-  font-family: 'Arial', sans-serif;
-  color: red;
-}
-
-ul{
-  list-style-type: none;
   padding: 0;
-  margin: 15px 0;
+  position: absolute;
 }
 
-li{
-  font-size: 16px;
-  font-weight: 200;
-  font-family: 'Lato', sans-serif;
-  height: 40px;
-  line-height: 35px;
+#top-view {
+  position: absolute;
+  z-index: 1;
+  background: #003366;
+  width: 100%;
+  border: 1px solid black;
+  height: 90px;
+  opacity: .9
+}
+
+#title {
+  position: absolute;
+  text-transform: uppercase;
+  color: #ffffcc;
+}
+
+#attribution {
+  position: absolute;
+  color: #ffffcc;
+}
+
+#nav {
+  position: absolute;
+  background: #003366;
+  opacity: .9;
+  border: 1px solid black;
+  height: 80%;
+  top: 90px;
+}
+
+#search-box {
+  background: #fff;
+  width: 50%;
+  height: 30px;
+  position: absolute;
+}
+
+.restaurant-list {
+  overflow: scroll;
+  width: 100%;
+  height: 70%;
+  position: absolute;
+}
+
+li {
+  list-style: none;
+  color: #ffffcc;
+  position: relative;
+  margin-top: 20px;
+}
+
+#list-item:hover {
+  background: #99cc00;
   cursor: pointer;
 }
 
-.gm-style-iw img{
-  float: right;
-  margin: 10px;
+#pano {
+  width: 180px;
+  height: 120px;
+  margin: 0 auto;
 }
 
-li:hover{
-  background-color:     #F8F8FF;
+.toggle-btn {
+  width: 35px;
+  height: 5px;
+  background-color: lightgreen;
+  margin: 6px 0;
+  position: relative;
+  cursor: pointer;
 }
 
-h3{
-  font-family: 'Lato', sans-serif;
-  font-size: 30px;
-  font-weight: 900;
-  margin: 10px 10px 0 0;
+#windowName{
+  margin: 0 auto;
 }
 
-input[type="text"]{
-  flex: 1;
-    background: #fff;
-    border: 1px solid #ccc;
-    padding: 3%;
-    color: #555;
-    font: 95% Arial, Helvetica, sans-serif;
+.windowStyles {
+  font-size: 16px;
+  margin: 0 auto;
 }
 
-@media all and (max-width: 800px){
+a {
+  text-decoration: none;
+  color: black;
+}
 
-  .container{
-    flex-flow: row wrap;
-  }
-
-  .controls{
-    position: absolute;
-    top: 50px;
-    left: -500px;
-    width: 85%;
-    z-index: 2;
-    background-color: rgba(70, 70, 70, 0.6);
-    color: white;
-  }
-
-  .expanded{
-    transform: translate(500px);
-  }
-
-  li:hover{
-    background-color: rgba(200, 200, 200, 0.3);
-  }
-
-  .mobile-menu {
-    display: flex;
-  }
+.windowStyles a:hover {
+  color: blue;
 }

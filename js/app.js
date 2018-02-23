@@ -1,216 +1,218 @@
-// MODEL - This is where the information the map uses to work is stored.
-function MapSettings() {
-  this.initialCoords = { lat: 40.825412, lng: -73.956994 },
-  this.locations = [
-    { name: "The City College of New York", coords: { lat: 40.820047 , lng: -73.949262 }, id: 0 },
-    { name: "Yankee Stadium", coords: { lat: 40.829651 , lng: -73.926170 }, id: 1 },
-    { name: "Apollo Theater", coords: { lat: 40.810010 , lng: -73.950056 }, id: 2 },
-    { name: "Columbia University", coords: { lat: 40.807852 , lng: -73.962138 }, id: 3 },
-    { name: "Harlem Public", coords: { lat: 40.828721 , lng: -73.948466 }, id: 4 },
-    
-  ];
-}
-var mapSettings = new MapSettings();
+//Use Foursquare API to get restaurant data to populate model
+var url = 'https://api.foursquare.com/v2/venues/search';
+var response, vm, map, marker;
+//Constructor function to format Restaurant info
+var Restaurant = function(data) {
+    var self = this;
+    this.name = data.name;
+    this.type = data.categories.length > 0 ? data.categories[0].name : "";
+    this.address = data.location.address + ' ' + data.location.city + ', ' + data.location.state + ' ' + data.location.postalCode;
+    this.contact = data.contact.formattedPhone;
+    this.url = data.url;
 
-function MapError(){
-  var map = $('#map');
-  map.addClass('container');
-  map.html('<div class="error-message">There was en error retrieving the map. Please refresh the page to try again.</div>');
-}
+    this.position = {
+        lat: data.location.lat,
+        lng: data.location.lng
+    };
+};
 
-var map, markers, infowindow, populateInfoWindow, previousMarker, disablePreviousMarker;
-function initMap(){
-  // The Map is initialized here using the configuration we find in mapSettings.
-  map = new google.maps.Map(document.getElementById('map'), {
-    center: mapSettings.initialCoords,
-    zoom: 13
-  });
-
-  // Centralizes the screen if a user resizes it. 
-  google.maps.event.addDomListener(window, 'resize', function(){
-    fitBounds();
-  });
-
-  // The initial PoI locations are created here and set to the map.
-  markers = createMarkersFromLocations(mapSettings.locations);
-  function createMarkersFromLocations(locations){
-    var tempMarkers = [];
-    locations.forEach(function(value, index){
-      var marker = new google.maps.Marker({
-        position: value.coords,
-        map: map,
-        animation: google.maps.Animation.DROP,
-        title: value.name,
-      });
-      marker.addListener('click', function(e){
-        disablePreviousMarker();
-
-        this.setAnimation(google.maps.Animation.BOUNCE);
-        populateInfoWindow(this);
-        previousMarker = this;
-        e.stop();
-      });
-
-      tempMarkers.push(marker);
+//Create map and use Foursquare data to get locations and restaurant details
+function initMap() {
+    map = new google.maps.Map(document.getElementById('map'), {
+        center: {
+            lat: 40.71427,
+            lng: -74.00597
+        },
+        zoom: 13,
+        mapTypeControl: false
     });
-    return tempMarkers;
-  }
+    vm = new ViewModel();
 
-  disablePreviousMarker = function(){
-    if (previousMarker !== undefined){
-      previousMarker.setAnimation(null);
+    ko.applyBindings(vm);
+
+    var bounds = new google.maps.LatLngBounds();
+    var infowindow = new google.maps.InfoWindow();
+    var streetViewService = new google.maps.StreetViewService();
+
+    function getData(restaurants) {
+        $.ajax({
+            url: url,
+            dataType: 'json',
+            data: {
+                client_id: "NMLBFZ3KLTVSOMN12X1SVT4AQPXXZEX3QV1444PQR0KSBDT2",
+                client_secret: "GVQGVWWR3KASGSBCLPZWIGHMHCTVEHOIZRRFIVTW5KO3X4I2",
+                v: 20180222,
+                near: "new york city",
+                query: "restaurant",
+                async: true,
+            },
+            success: function(data) {
+                response = data.response.venues;
+                for (var i = 0; i < response.length; i++) {
+                    restaurants.push(new Restaurant(response[i]));
+                }
+                //Create markers and infowindows for the marker
+                restaurants().forEach(function(restaurantData) {
+                    this.position = restaurantData.position;
+                    this.name = restaurantData.name;
+                    this.address = restaurantData.address;
+                    this.contact = restaurantData.contact;
+                    this.url = restaurantData.url;
+
+                    //Style the markers a bit. This will be our listing marker icon.
+                    var defaultIcon = makeMarkerIcon('0091ff');
+
+                    // //Create a "highlighted location" marker color for when the user mouses over the marker
+                    var highlightedIcon = makeMarkerIcon('FFFF24');
+
+                    //Create markers and infowindows for each location
+                    marker = new google.maps.Marker({
+                        position: this.position,
+                        name: this.name,
+                        map: map,
+                        animation: google.maps.Animation.DROP,
+                        address: this.address,
+                        contact: this.contact,
+                        url: this.url,
+                        icon: defaultIcon,
+                    });
+                    //Attach markers to restaurant objects
+                    restaurantData.marker = marker;
+
+                    //Make marker bounce and
+                    marker.addListener('click', function() {
+                        var marker = this;
+                        toggleBounce(marker);
+                        setTimeout(function() {
+                            marker.setAnimation(null);
+                        }, 1400);
+                        map.setZoom(14);
+                        map.setCenter(marker.getPosition());
+                    });
+
+                    //Marker bounces on click
+                    function toggleBounce(marker) {
+                        if (marker.getAnimation() !== null) {
+                            marker.setAnimation(null);
+                        } else {
+                            marker.setAnimation(google.maps.Animation.BOUNCE);
+                        }
+                    }
+                    //Click on marker to open infowindow
+                    marker.addListener('click', function() {
+                        populateInfoWindow(this, infowindow);
+                    });
+                    //Populate info windows with api data
+                    populateInfoWindow = function(mapMarker, infowindow) {
+                        if (infowindow.marker != mapMarker) {
+                            infowindow.setContent('');
+                            infowindow.marker = mapMarker;
+                            infowindow.addListener('closeclick', function() {
+                                infowindow.marker = null;
+                            });
+                            //Get image of restaurant
+                            var windowContent = '<h2 id="windowName">' + mapMarker.name + '</h2>' + '<div id="pano"></div>' +
+                                '<div class="windowStyles">' + mapMarker.address + '</div>' +
+                                '<div class="windowStyles">' + mapMarker.contact + '</div>' +
+                                '<div class="windowStyles"><a target="_blank" href="' + mapMarker.url + '">' +
+                                'Visit their website' + '</div>';
+                            var radius = 50;
+                            var getStreetView = function(data, status) {
+                                if (status == google.maps.StreetViewStatus.OK) {
+                                    var nearStreetViewLocation = data.location.latLng;
+                                    var heading = google.maps.geometry.spherical.computeHeading(
+                                        nearStreetViewLocation, marker.position);
+                                    infowindow.setContent(windowContent);
+                                    var panoramaOptions = {
+                                        position: nearStreetViewLocation,
+                                        pov: {
+                                            heading: heading,
+                                            pitch: 10
+                                        }
+                                    };
+                                    var panorama = new google.maps.StreetViewPanorama(
+                                        document.getElementById('pano'), panoramaOptions);
+                                } else {
+                                    infowindow.setContent('div' + restaurantData.name + '</div>' +
+                                        '<div>No Street View Found</div>');
+                                }
+                            };
+                            streetViewService.getPanoramaByLocation(mapMarker.position, radius, getStreetView);
+                            //Open the infowindow on the correct marker
+                            infowindow.open(map, mapMarker);
+                        }
+                    };
+                    restaurantData.infowindow = populateInfoWindow;
+                    bounds.extend(marker.position);
+
+                    //Change colors of the marker with mouseove
+                    marker.addListener('mouseover', function() {
+                        this.setIcon(highlightedIcon);
+                    });
+                    //Change back to original color with mouseout
+                    marker.addListener('mouseout', function() {
+                        this.setIcon(defaultIcon);
+                    });
+
+                    //Give markers unique color scheme
+                    function makeMarkerIcon(markerColor) {
+                        var markerImage = new google.maps.MarkerImage(
+                            'http://chart.googleapis.com/chart?chst=d_map_spin&chld=1.15|0|' + markerColor +
+                            '|40|_|%E2%80%A2',
+                            new google.maps.Size(21, 34),
+                            new google.maps.Point(0, 0),
+                            new google.maps.Point(10, 34),
+                            new google.maps.Size(21, 34));
+                        return markerImage;
+                    }
+                });
+            },
+            error: function() {
+                alert('Sorry! Data unavailable at this time. Please refresh the page and try again.');
+            }
+        });
+
     }
-  };
-  // Auxiliary function used to center the map and provide space
-  // for the infowindows.
-  function fitBounds(bounds){
-    if (bounds !== undefined){
-      map.setCenter(bounds.getPosition());
-      map.panBy(0, -150);
+    //Use Foursquare data to populate the list
+    function ViewModel() {
+        var self = this;
+        this.restaurants = ko.observableArray([]);
+        this.searchRestaurants = ko.observable('');
+        this.title = ko.observable('eat boston');
+        this.attribution = ko.observable('Data by Foursquare API');
+        this.visibleNav = ko.observable(false);
+
+        //Show infowindow when user clicks restaurant in list view
+        this.restaurantClick = function(infowindowData) {
+            new google.maps.event.trigger(infowindowData.marker, 'click');
+            bounds.extend(infowindowData.marker.position);
+        };
+
+        this.toggleNav = function() {
+              self.visibleNav(!self.visibleNav());
+        };
+        //Filter view list and markers
+        self.filteredList = ko.computed(function() {
+            var filter = self.searchRestaurants().toLowerCase();
+            if (!filter) {
+                for (var i = 0; i < self.restaurants().length; i++) {
+                    if (self.restaurants()[i].marker) {
+                        self.restaurants()[i].marker.setVisible(true);
+                    }
+                }
+                return self.restaurants();
+            } else {
+                return ko.utils.arrayFilter(self.restaurants(), function(restaurant) {
+                    var filtered = restaurant.name.toLowerCase().indexOf(filter) > -1;
+                    restaurant.marker.setVisible(filtered);
+                    return filtered;
+                });
+            }
+        }, self.filteredList);
+        getData(this.restaurants);
     }
-    else{
-      map.setCenter(mapSettings.initialCoords);
-    }
-  }
-
-  // Instantiates a new infowindow to be used when the markers are selected.
-  infowindow = new google.maps.InfoWindow();
-  infowindow.addListener('closeclick', function(){
-    infowindow.close();
-  });
-
-  // Function used to populate the infowindow with content from the
-  // wikipedia service.
-  populateInfoWindow = function(marker){
-
-    // Send an ajax call to Wikipedia to retrieve information on the points of interest.
-    // var wikiEndPoint = 'https://en.wikipedia.org/w/api.php?' +
-    var wikiUrl = 'https://en.wikipedia.org/w/api.php?' +
-    'format=json&' +
-    'action=parse&' +
-    'section=0&' +
-    'page=' + marker.title;
-  // AJAX request object.
-    $.ajax({
-    url: wikiUrl,
-    dataType: 'jsonp',
-    contentType: 'text/plain',
-
-      //Retrieves the markup data from WikiPedia and set it to the infowindow content.
-      success: function(data){
-
-        var markup = data['*'];
-
-        var blurb = $('<div></div>').html(markup);
-
-        var image = $('<div></div>').html(blurb.find('img').first());
-        image.addClass('info-image');
-
-        // Remove all elements from the blurb that aren't text.
-        blurb.children(':not(p)').remove();
-
-        // Replace the links with regular text.
-        blurb.find('a').each(function() { $(this).replaceWith($(this).html()); });
-
-        // Trims the text if too large.
-        if (blurb.children('p:nth-of-type(2)').text().length > 500){
-          blurb.children('p').slice(2).remove();
-        }
-
-        // Set the wikipedia content to the infowindow on the marker.
-        infowindow.setContent(image.html() + blurb.html() + "<div class='attribution'>Powered by Wikipedia.</div>");
-      },
-      error: function(){
-        infowindow.setContent("<div class='info-error'>There was a problem with the Wikipedia search. Please try again later or contact the administrator.</div>");
-      }
-    });
-
-    // Open the info window on the marker.
-    infowindow.open(map, marker);
-    fitBounds(marker);
-  };
 }
 
-// Knockout ViewModel.
-function AppViewModel(){
-  var self = this;
-  this.mobileToggle = ko.observable(false);
-  this.locations = mapSettings.locations;
-  this.filteredLocations = ko.observableArray(this.locations);
-
-  // Filters the list of locations on the left Menu using the value
-  // the user typed in the text control.
-  this.filterViewList = function(data, event){
-    var value = event.target.value,
-        filteredLocationNames = [];
-    // If the control is clear, add all locations to the array of locations.
-    if (value === ''){
-      self.filteredLocations(self.locations);
-    }
-    // Else, filter the locations to only those that share a similar name and
-    // replace the locations array with that new filtered array.
-    else{
-      self.filteredLocations(self.locations.filter(function(locations){
-        return locations.name.toLowerCase().includes(value.toLowerCase());
-      }));
-    }
-
-    // Adds the names of the filtered locations to an array called
-    // filteredLocationNames.
-    self.filteredLocations().forEach(function(value){
-      filteredLocationNames.push(value.name);
-    });
-
-    // Disables or enables each marker on the map, depending on whether
-    // their names can be found in the filtered list of location names.
-    markers.forEach(function(value, index){
-      if (filteredLocationNames.indexOf(value.title) > - 1) {
-        value.setVisible(true);
-      }
-      else
-        value.setVisible(false);
-    });
-  };
-
-  // Gets the index of the selected List element in the DOM.
-  this.getIndex = function(event){
-    var index = event.target.getAttribute('data-index');
-    return index;
-  };
-
-  // Selects the location on the list and displays the infowindow on
-  // the map at the proper marker's location.
-  this.selectLocation = function(data, event){
-    var index = self.getIndex(event),
-        currentMarker = markers[index];
-    // Prevents previous marker to keep its animation.    
-    disablePreviousMarker();
-    currentMarker.setAnimation(google.maps.Animation.BOUNCE);
-    populateInfoWindow(currentMarker);
-    previousMarker = currentMarker;
-  };
-
-  // Animates the bouncing of the markers if the user is hovering over it.
-  this.ListMarkerBouncer = function(data, event){
-    var index = self.getIndex(event);
-    if (event.type === 'mouseover'){
-      markers[index].setAnimation(google.maps.Animation.BOUNCE);
-    }
-    else if(event.type ==='mouseout'){
-      markers[index].setAnimation(null);      
-    }
-  };
-
-  // Expands and retracts the menu in the mobile web version of the app.
-  this.openMobileControls = function(){
-    var toggle = this.mobileToggle();
-    if (toggle){
-      this.mobileToggle(false);
-    }
-    else{
-      this.mobileToggle(true);
-    }
-  };
+function googleError() {
+    alert('Sorry, Google Maps is not available at this time.');
 }
-
-ko.applyBindings(new AppViewModel());
